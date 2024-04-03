@@ -1,0 +1,128 @@
+import matplotlib.pyplot as plt
+
+import numpy as np
+
+from scipy.io import wavfile
+
+import audioop
+
+import math
+
+import wave
+
+ 
+# bestandsnaam kan je vervangen door je bestandslocatie van je wave bestand in zetten
+bestand = r'bestandsnaam'
+
+ 
+
+sample_rate, audio_time_series = wavfile.read(bestand)
+
+single_sample_data = audio_time_series[:sample_rate]
+
+ 
+
+#lees audio file uit
+
+sample_rate,data = wavfile.read(bestand)
+
+ 
+
+wav_file = wave.open( bestand , 'r')
+
+ 
+
+n_frames = wav_file.getnframes()
+
+ 
+
+framerate = wav_file.getframerate()
+
+ 
+
+# Bereken de totale tijd van het bestand
+
+total_time = n_frames / framerate
+
+ 
+
+i = 0
+
+n = 200
+
+db_lijst = []
+
+ 
+
+for i in range(int(len(data)/n)):
+
+    variabele = data[(i*n):((i+1)*n)]
+
+    db = 20*math.log10(audioop.rms(variabele,4)/2**15)
+
+    db_lijst.append(db)
+
+   
+
+db_array = np.array(db_lijst)
+
+data = data[:,0]
+
+ 
+
+# Lees de audiogegevens en converteer naar een numpy array
+
+audio_data = np.frombuffer(wav_file.readframes(n_frames), dtype=np.int16)
+
+def fft_plot(audio, sample_rate):
+
+  y_freq = db_array
+
+  x_freq = np.linspace(0, total_time,int(n_frames/n))
+
+  plt.plot(x_freq, y_freq)
+
+  plt.xlabel("Tijd")
+
+  plt.ylabel("Decibel")
+
+  return plt.show()
+# zoekt de hoogste piek en van uit daar zoekt die de waarde die een 20 db afname heeft 
+max_db= db_array[0]
+     
+for i in range(1, len(db_array)):
+    
+     if db_array[i] > max_db:
+         max_db = db_array[i]
+     
+    # de - 20 kan je aanpassen als je een andere db afnamen wilt weten 
+     if db_array[i] < max_db - 20:
+         drop_index = i
+         print('20db_drop_index:', drop_index, 'db_waarde:', db_array[drop_index])
+         break
+# gaat 0,8 seconden achteruit van af het einde van de drop (dit kan je eventueel aanpassen)              
+sec_arrayframe = total_time/len(db_array) 
+index_terug= 0.8/sec_arrayframe
+
+nieuwedrop_index= drop_index - index_terug
+
+
+nd_index = math.floor(nieuwedrop_index)
+
+nieuw_maxdb= db_array[nd_index]
+
+# zoekt nieuwe hoge piek om begin drop te vinden 
+for j in range(nd_index, len(db_array)):
+   
+    if db_array[j] > nieuw_maxdb:
+        nieuw_maxdb = db_array[j]
+        nieuw_maxdb_index = j 
+# index van begin en eind drop worden gebruikt om nagalmtijd te berekenen 
+tijd_nieuw_maxdb = nieuw_maxdb_index * sec_arrayframe         
+
+tijd_drop_index = drop_index * sec_arrayframe
+
+nagalmtijd= tijd_drop_index - tijd_nieuw_maxdb
+print(tijd_drop_index)
+print(tijd_nieuw_maxdb)
+print('nagalmtijd:', nagalmtijd) 
